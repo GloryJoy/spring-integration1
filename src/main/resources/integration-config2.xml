@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+       xmlns:int-file="http://www.springframework.org/schema/integration/file"
+       xmlns:int-stream="http://www.springframework.org/schema/integration/stream"
+       xmlns:ftp="http://www.springframework.org/schema/integration/ftp"
+       xmlns:mail="http://www.springframework.org/schema/integration/mail"
+       xmlns:twitter="http://www.springframework.org/schema/integration/twitter"
+       xmlns:int-http="http://www.springframework.org/schema/integration/http"
+       xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            https://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/integration 
+            https://www.springframework.org/schema/integration/spring-integration.xsd
+            http://www.springframework.org/schema/task 
+            https://www.springframework.org/schema/task/spring-task-3.1.xsd
+            http://www.springframework.org/schema/integration/amqp 
+            https://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+            http://www.springframework.org/schema/integration/file
+            https://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+            http://www.springframework.org/schema/integration/ftp
+            https://www.springframework.org/schema/integration/ftp/spring-integration-ftp.xsd
+            http://www.springframework.org/schema/integration/mail
+            https://www.springframework.org/schema/integration/mail/spring-integration-mail.xsd
+            http://www.springframework.org/schema/integration/twitter
+            https://www.springframework.org/schema/integration/twitter/spring-integration-twitter.xsd
+            http://www.springframework.org/schema/integration/stream
+            https://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+            http://www.springframework.org/schema/integration/http
+            https://www.springframework.org/schema/integration/http/spring-integration-http.xsd">
+
+    <int:gateway service-interface="com.joyful.java.springintegration.service.EnhancedPrintingServiceGateway">
+        <int:default-header name="globalTrackingID" expression="@UUIDProvider.getUUID"/>
+        <int:method name="print" request-channel="inputChannel">
+            <int:header name="printServiceTrackingId" expression="@UUIDProvider.getUUID"/>
+        </int:method>
+
+        <int:method name="printUpperCase" request-channel="printUpperCaseChannel">
+            <int:header name="printUpperCaseTrackingId" expression="@UUIDProvider.getUUID"/>
+        </int:method>
+    </int:gateway>
+
+    <int:channel id="defaultChannel"/>
+    <int:channel id="outputChannel"/>
+    <int:channel id="requestChannel"/>
+    <int:channel id="printChannel"/>
+    <int:channel id="printUpperCaseChannel"/>
+    <int:publish-subscribe-channel id="inputChannel"></int:publish-subscribe-channel>
+
+    <bean class="com.joyful.java.springintegration.service.UppercasePrintService" id="uppercasePrintService"/>
+    <bean class="com.joyful.java.springintegration.service.NumericPrintService" id="numbericPrintService"/>
+    <int:service-activator order="1" ref="uppercasePrintService" method="execute" input-channel="printUpperCaseChannel"
+                           output-channel="intChannel"/>
+
+
+<int:channel id="httpChannel"/>
+    <int-http:inbound-channel-adapter
+        path="/"
+        supported-methods="GET"
+        channel="httpChannel"/>
+
+
+
+</beans>

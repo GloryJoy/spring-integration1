@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+       xmlns:int-file="http://www.springframework.org/schema/integration/file"
+       xmlns:int-stream="http://www.springframework.org/schema/integration/stream"
+       xmlns:ftp="http://www.springframework.org/schema/integration/ftp"
+       xmlns:mail="http://www.springframework.org/schema/integration/mail"
+       xmlns:twitter="http://www.springframework.org/schema/integration/twitter"
+       xmlns:int-http="http://www.springframework.org/schema/integration/http"
+       xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            https://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/integration 
+            https://www.springframework.org/schema/integration/spring-integration.xsd
+            http://www.springframework.org/schema/task 
+            https://www.springframework.org/schema/task/spring-task-3.1.xsd
+            http://www.springframework.org/schema/integration/amqp 
+            https://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+            http://www.springframework.org/schema/integration/file
+            https://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+            http://www.springframework.org/schema/integration/ftp
+            https://www.springframework.org/schema/integration/ftp/spring-integration-ftp.xsd
+            http://www.springframework.org/schema/integration/mail
+            https://www.springframework.org/schema/integration/mail/spring-integration-mail.xsd
+            http://www.springframework.org/schema/integration/twitter
+            https://www.springframework.org/schema/integration/twitter/spring-integration-twitter.xsd
+            http://www.springframework.org/schema/integration/stream
+            https://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+            http://www.springframework.org/schema/integration/http
+            https://www.springframework.org/schema/integration/http/spring-integration-http.xsd">
+
+
+    <!--    &lt;!&ndash; Point-to-point channel to send registration messages from web layer to service layer &ndash;&gt;-->
+    <!--    <int:channel id="registrationRequest"/>-->
+
+    <!--    &lt;!&ndash; Service activator that calls the registration service whenever a message is sent to the channel &ndash;&gt;-->
+    <!--    <int:service-activator-->
+    <!--            input-channel="registrationRequest"-->
+    <!--            ref="registrationService"-->
+    <!--            method="register"/>-->
+    <!--    <int:channel id="inputChannel">-->
+    <!--        <int:dispatcher failover="false"/>-->
+    <!--&lt;!&ndash;        <int:priority-queue capacity="10"/>&ndash;&gt;-->
+    <!--    </int:channel>-->
+    <!--    <task:executor id="executor" pool-size="5"/>-->
+    <!--    <int:bridge input-channel="pollableChannel" output-channel="inputChannel">-->
+    <!--        <int:poller fixed-delay="5" time-unit="SECONDS" max-messages-per-poll="2">-->
+    <!--        </int:poller>-->
+    <!--    </int:bridge>-->
+
+
+    <!--    <int:channel id="pollableChannel">-->
+    <!--        <int:queue capacity="10"/>-->
+    <!--        <int:interceptors>-->
+    <!--            <int:ref bean="interceptor"/>-->
+    <!--        </int:interceptors>-->
+    <!--    </int:channel>-->
+    <!--    <int:recipient-list-router input-channel="inputChannel" default-output-channel="defaultChannel">-->
+    <!--        <int:recipient channel="intChannel" selector-expression="payload.equals(5)"/>-->
+    <!--        <int:recipient channel="stringChannel"/>-->
+    <!--    </int:recipient-list-router>-->
+    <int:gateway service-interface="com.joyful.java.springintegration.service.EnhancedPrintingServiceGateway">
+        <int:default-header name="globalTrackingID" expression="@UUIDProvider.getUUID"/>
+        <int:method name="print" request-channel="inputChannel">
+            <int:header name="printServiceTrackingId" expression="@UUIDProvider.getUUID"/>
+        </int:method>
+
+        <int:method name="printUpperCase" request-channel="printUpperCaseChannel">
+            <int:header name="printUpperCaseTrackingId" expression="@UUIDProvider.getUUID"/>
+        </int:method>
+        <int:method name="registerationRequest" request-channel="registerationRequest"/>
+    </int:gateway>
+
+    <int:gateway service-interface="com.joyful.java.springintegration.service.PrinterGateway"/>
+
+    <int:router ref="customRouter" input-channel="inputChannel"/>
+    <int:channel id="defaultChannel"/>
+    <int:channel id="outputChannel"/>
+    <int:channel id="splitterChannel"/>
+    <int:channel id="objectToJsonChannel"/>
+    <int:channel id="filteredHeaderChannel"/>
+    <int:channel id="getPhoneNumberChannel"/>
+    <int:channel id="requestChannel"/>
+    <int:channel id="printChannel"/>
+    <int:channel id="printUpperCaseChannel"/>
+    <int:channel id="registerationRequest"/>
+    <int:publish-subscribe-channel id="inputChannel"></int:publish-subscribe-channel>
+
+
+    <!--    <int:header-value-router input-channel="inputChannel" header-name="routeHeader">-->
+    <!--        <int:mapping value="int" channel="intChannel"/>-->
+    <!--        <int:mapping value="string" channel="stringChannel"/>-->
+    <!--</int:header-value-router>-->
+    <!--    <int:payload-type-router input-channel="inputChannel">-->
+    <!--        <int:mapping type="java.lang.Integer" channel="intChannel"/>-->
+    <!--        <int:mapping type="java.lang.String" channel="stringChannel"/>-->
+    <!--    </int:payload-type-router>-->
+    <bean class="com.joyful.java.springintegration.service.UppercasePrintService" id="uppercasePrintService"/>
+    <bean class="com.joyful.java.springintegration.service.CustomChannelInterceptor" id="interceptor"/>
+    <bean class="com.joyful.java.springintegration.service.NumericPrintService" id="numbericPrintService"/>
+    <int:service-activator order="1" ref="uppercasePrintService" method="execute" input-channel="printUpperCaseChannel"
+                           output-channel="intChannel"/>
+    <!--    <int:service-activator ref="printService" method="print" input-channel="stringChannel"/>-->
+    <!--    <int:service-activator ref="numbericPrintService" method="print" input-channel="intChannel"/>-->
+    <!--    <int:service-activator ref="defaultPrintService" method="print" input-channel="defaultChannel"/>-->
+    <int:service-activator ref="filteredPrintService" method="print" input-channel="outputChannel"/>
+    <int:service-activator ref="splitterPrintService" method="print" input-channel="splitterChannel"/>
+    <int:service-activator ref="transformerPrintService" method="print" input-channel="objectToJsonChannel"/>
+    <int:service-activator ref="customPhoneNumberProvider" method="getPhoneNumberByUserName"
+                           input-channel="getPhoneNumberChannel"/>
+
+    <int:splitter ref="customSplitter" input-channel="inputChannel" output-channel="splitterChannel"/>
+    <int:object-to-json-transformer input-channel="inputChannel" output-channel="objectToJsonChannel"/>
+
+    <int:header-enricher input-channel="filteredHeaderChannel" output-channel="stringChannel">
+        <int:header name="isHeaderEnriched" value="true"/>
+        <int:header name="packageKey" value="ABCDEFG"/>
+        <int:header name="trackingId" ref="customHeaderEnricher" method="getPackageId"/>
+    </int:header-enricher>
+    <!--    <int:filter order="1" ref="customFilter" input-channel="inputChannel" output-channel="outputChannel"/>-->
+    <!--    <int:filter order="2" input-channel="inputChannel" output-channel="outputChannel"-->
+    <!--                expression="headers.value.equals(4)"/>-->
+
+    <!--    <int:header-filter header-names="privateKey" input-channel="inputChannel" output-channel="filteredHeaderChannel"/>-->
+    <int:enricher input-channel="inputChannel" output-channel="stringChannel" request-channel="getPhoneNumberChannel"
+                  request-payload-expression="payload.userName">
+        <int:property name="phoneNumber" expression="payload"/>
+    </int:enricher>
+
+
+    <int:object-to-json-transformer
+            input-channel="registerationRequest"
+            output-channel="toRabbit"/>
+
+    <int:channel id="toRabbit"/>
+    <int-amqp:outbound-channel-adapter
+            id="obChannelAdapterRabbit" channel="toRabbit"
+            amqp-template="rabbitTemplate"
+            routing-key="registerationRequest"/>
+
+    <int-amqp:inbound-channel-adapter
+            queue-names="registerationRequest"
+            id="ibChannelAdapterRabbit"
+            channel="fromRabbit"/>
+
+    <int:channel id="fromRabbit"/>
+    <int:json-to-object-transformer
+            input-channel="fromRabbit"
+            output-channel="registerationInBound"/>
+
+    <int:channel id="registerationInBound"/>
+
+    <!--    <int:channel id="ibFileChannel"/>-->
+
+    <!--    <int-file:inbound-channel-adapter directory="file:///Volumes/Joy/projects/java/integration-oreiley"-->
+    <!--                                      filename-pattern="HELP.md"-->
+    <!--                                      channel="ibFileChannel">-->
+
+    <!--        <int:poller fixed-rate="10000"/>-->
+    <!--    </int-file:inbound-channel-adapter>-->
+
+
+    <!--    <int-file:outbound-channel-adapter-->
+    <!--            directory="file:///Volumes/Joy/projects/java/integration-oreiley/src/test"-->
+    <!--            channel="ibFileChannel"/>-->
+
+<!--        <int:channel id="emailReceiver"/>-->
+
+    <!--    from="registeration@example.com"-->
+    <!--    to="me@example.com"-->
+    <!--    subject="registeration confirmation">-->
+
+
+    <!--    <int:chain id="confirmationEmailChain" input-channel="emailReceiver">-->
+    <!--     <mail:header-enricher>-->
+    <!--         <mail:to value="me@example.com"/>-->
+    <!--         <mail:from value="registeration@example.com"/>-->
+    <!--         <mail:subject value="registeration confirmation"/>-->
+    <!--     </mail:header-enricher>-->
+
+    <!--        <int:transformer ref="confirmationMailTransformer"-->
+    <!--                         method="toMailText"/>-->
+    <!--        <mail:outbound-channel-adapter host="localhost" port="1025" username="" password=""/>-->
+    <!--    </int:chain>-->
+
+    <!--    <int:chain id="billingChain" input-channel="registerationEvent">-->
+    <!--        <int:header-enricher>-->
+    <!--            <int:header name="contentType"-->
+    <!--                        value="application/json"-->
+    <!--                        overwrite="true"/>-->
+    <!--        </int:header-enricher>-->
+    <!--        <int-http:outbound-channel-adapter-->
+    <!--            url=""-->
+    <!--            http-method="POST"/>-->
+    <!--    </int:chain>-->
+
+    <int:channel id="fileInboundChannel"/>
+    <int:channel id="fileTransformedChannel"/>
+    <int:channel id="fileTransformedChannelReply"/>
+    <int-file:inbound-channel-adapter
+            directory="/Volumes/Joy/projects/java/integration-oreiley/src/test"
+            filename-pattern="HELP.md"
+            channel="fileInboundChannel">
+        <int:poller fixed-rate="5" time-unit="SECONDS">
+
+        </int:poller>
+    </int-file:inbound-channel-adapter>
+
+    <int-file:file-to-string-transformer 
+            input-channel="fileInboundChannel" 
+            output-channel="fileTransformedChannel"/>
+    <int-file:outbound-gateway
+            directory="/Volumes/Joy/projects/java/integration-oreiley/src/test/test.md"
+            request-channel="fileTransformedChannel"
+            reply-channel="fileTransformedChannelReply"
+            auto-create-directory="true"> </int-file:outbound-gateway>
+
+    
+
+</beans>
